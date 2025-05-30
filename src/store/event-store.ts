@@ -1,6 +1,14 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export interface Comment {
+  id: string
+  eventId: string
+  userId: string
+  content: string
+  createdAt: string
+}
+
 export interface Event {
   id: string
   title: string
@@ -12,6 +20,7 @@ export interface Event {
   assignedUserId: string
   reminderEnabled: boolean
   reminderInterval: number // 提醒间隔（分钟）
+  comments?: Comment[] // 事件评论
 }
 
 export interface User {
@@ -26,6 +35,7 @@ export interface User {
 interface EventStore {
   events: Event[]
   users: User[]
+  comments: Comment[]
   currentUser: User | null
   isAuthenticated: boolean
   
@@ -39,6 +49,10 @@ interface EventStore {
   updateEvent: (id: string, updates: Partial<Event>) => void
   deleteEvent: (id: string) => void
   updateEventStatus: (id: string, status: Event['status']) => void
+  
+  // 评论管理
+  addComment: (eventId: string, content: string) => void
+  getEventComments: (eventId: string) => Comment[]
   
   // 用户管理
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => boolean
@@ -54,37 +68,38 @@ export const useEventStore = create<EventStore>()(
       users: [
         { 
           id: '1', 
-          name: '管理员', 
-          email: 'admin@demo.com', 
+          name: '王经理', 
+          email: 'manager@wuhu-weiju.com', 
           password: '123456',
           role: 'admin',
           createdAt: new Date().toISOString()
         },
         { 
           id: '2', 
-          name: '张三', 
-          email: 'zhangsan@demo.com', 
+          name: '张业务', 
+          email: 'sales@wuhu-weiju.com', 
           password: '123456',
           role: 'user',
           createdAt: new Date().toISOString()
         },
         { 
           id: '3', 
-          name: '李四', 
-          email: 'lisi@demo.com', 
+          name: '李财务', 
+          email: 'finance@wuhu-weiju.com', 
           password: '123456',
           role: 'user',
           createdAt: new Date().toISOString()
         },
         { 
           id: '4', 
-          name: '王五', 
-          email: 'wangwu@demo.com', 
+          name: '赵客服', 
+          email: 'service@wuhu-weiju.com', 
           password: '123456',
           role: 'user',
           createdAt: new Date().toISOString()
         }
       ],
+      comments: [],
       currentUser: null,
       isAuthenticated: false,
 
@@ -125,7 +140,8 @@ export const useEventStore = create<EventStore>()(
         const newEvent: Event = {
           ...eventData,
           id: Date.now().toString(),
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          comments: []
         }
         set((state) => ({ events: [...state.events, newEvent] }))
       },
@@ -140,7 +156,8 @@ export const useEventStore = create<EventStore>()(
       
       deleteEvent: (id) => {
         set((state) => ({
-          events: state.events.filter(event => event.id !== id)
+          events: state.events.filter(event => event.id !== id),
+          comments: state.comments.filter(comment => comment.eventId !== id)
         }))
       },
       
@@ -150,6 +167,28 @@ export const useEventStore = create<EventStore>()(
             event.id === id ? { ...event, status } : event
           )
         }))
+      },
+      
+      // 评论管理方法
+      addComment: (eventId, content) => {
+        const currentUser = get().currentUser
+        if (!currentUser) return
+        
+        const newComment: Comment = {
+          id: Date.now().toString(),
+          eventId,
+          userId: currentUser.id,
+          content,
+          createdAt: new Date().toISOString()
+        }
+        
+        set((state) => ({
+          comments: [...state.comments, newComment]
+        }))
+      },
+      
+      getEventComments: (eventId) => {
+        return get().comments.filter(comment => comment.eventId === eventId)
       },
       
       // 用户管理方法
@@ -204,7 +243,7 @@ export const useEventStore = create<EventStore>()(
       }
     }),
     {
-      name: 'event-storage'
+      name: 'wuhu-weiju-storage'
     }
   )
 ) 

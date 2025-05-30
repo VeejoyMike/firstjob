@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Crown, User } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface LoginFormProps {
@@ -51,19 +52,23 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
     }, 500)
   }
 
-  const handleDemoLogin = (userType: 'admin' | 'user') => {
-    if (userType === 'admin') {
-      setFormData({ emailOrName: 'admin@demo.com', password: '123456' })
-    } else {
-      setFormData({ emailOrName: 'zhangsan@demo.com', password: '123456' })
-    }
+  const handleQuickLogin = (user: any) => {
+    setFormData({ emailOrName: user.email, password: user.password })
+    // 自动登录
+    setTimeout(() => {
+      const success = login(user.email, user.password)
+      if (success) {
+        toast.success(`欢迎回来，${user.name}！`)
+        onLoginSuccess?.()
+      }
+    }, 100)
   }
 
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle>事件管理系统</CardTitle>
-        <CardDescription>请登录以继续使用</CardDescription>
+        <CardTitle>芜湖市微聚贸易有限公司</CardTitle>
+        <CardDescription>日常看板 - 请登录以继续使用</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,49 +100,41 @@ export function LoginForm({ onLoginSuccess, onSwitchToRegister }: LoginFormProps
           </Button>
         </form>
         
-        {/* 演示账号 */}
-        <div className="mt-4 text-center text-sm text-gray-600">
-          <p>演示账号：</p>
-          <p>管理员：admin@demo.com 或 管理员 / 123456</p>
-          <p>用户：zhangsan@demo.com 或 张三 / 123456</p>
+        {/* 快速登录区域 */}
+        <div className="mt-6">
+          <div className="text-center text-sm text-gray-600 mb-3">
+            <p>快速登录：</p>
+          </div>
           
-          <div className="mt-2">
+          <div className="space-y-2">
+            {users.map(user => (
+              <Button 
+                key={user.id}
+                variant="outline" 
+                size="sm" 
+                className="w-full text-xs justify-start"
+                onClick={() => handleQuickLogin(user)}
+              >
+                <div className="flex items-center gap-2">
+                  {user.role === 'admin' ? (
+                    <Crown className="w-3 h-3 text-yellow-500" />
+                  ) : (
+                    <User className="w-3 h-3 text-gray-500" />
+                  )}
+                  <span>{user.name}</span>
+                  <span className="text-gray-400">({user.role === 'admin' ? '管理员' : '员工'})</span>
+                </div>
+              </Button>
+            ))}
+          </div>
+          
+          <div className="mt-4 text-center">
             <Button 
               variant="link" 
               className="text-sm"
               onClick={onSwitchToRegister}
             >
               没有账号？点击注册
-            </Button>
-          </div>
-          
-          <div className="mt-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs mr-2"
-              onClick={() => handleDemoLogin('admin')}
-            >
-              快速登录：管理员
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs"
-              onClick={() => handleDemoLogin('user')}
-            >
-              快速登录：普通用户
-            </Button>
-          </div>
-          
-          <div className="mt-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="text-xs"
-              onClick={() => toast.info(`当前有 ${users.length} 个用户`)}
-            >
-              调试：查看用户列表 ({users.length})
             </Button>
           </div>
         </div>
