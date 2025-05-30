@@ -1,101 +1,268 @@
 'use client'
 
+import { useState } from 'react'
+import { useEventStore } from '@/store/event-store'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useCounterStore } from '@/store/counter'
-import { Minus, Plus, RefreshCcw } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Plus, Calendar, Clock, User, Edit, Trash2, LogOut, Users, Crown } from 'lucide-react'
 import { toast } from 'sonner'
+import { AddEventDialog } from '@/components/add-event-dialog'
+import { LoginForm } from '@/components/login-form'
+import { RegisterForm } from '@/components/register-form'
+import { UserManagement } from '@/components/user-management'
+import { useReminder } from '@/hooks/use-reminder'
 
-/**
- * @description 这只是个示例页面，你可以随意修改这个页面或进行全面重构
- */
-export default function StartTemplatePage() {
-	const { count, increment, decrement, reset } = useCounterStore()
-	const [isLoading, setIsLoading] = useState(true)
+const statusMap = {
+	'pending': { label: '待处理', color: 'bg-yellow-500' },
+	'in-progress': { label: '进行中', color: 'bg-blue-500' },
+	'completed': { label: '已完成', color: 'bg-green-500' }
+}
 
-	useEffect(() => {
-		// 确保loading至少显示200毫秒
-		const timer = setTimeout(() => {
-			setIsLoading(false)
-		}, 200)
+export default function HomePage() {
+	const { events, currentUser, isAuthenticated, logout, getUserById } = useEventStore()
+	const [filter, setFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all')
+	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+	const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
+	const [activeTab, setActiveTab] = useState('events')
 
-		return () => clearTimeout(timer)
-	}, [])
+	// 启用提醒功能（仅在已登录时）
+	useReminder()
 
-	const handleIncrement = () => {
-		const success = increment()
-		if (!success) {
-			toast.error('已达到最大值 (10)')
-		}
+	// 如果未登录，显示登录/注册界面
+	if (!isAuthenticated) {
+		return (
+			<main className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+				{authMode === 'login' ? (
+					<LoginForm 
+						onLoginSuccess={() => {
+							setAuthMode('login')
+							toast.success('欢迎回来！')
+						}}
+						onSwitchToRegister={() => setAuthMode('register')}
+					/>
+				) : (
+					<RegisterForm 
+						onRegisterSuccess={() => setAuthMode('login')}
+						onSwitchToLogin={() => setAuthMode('login')}
+					/>
+				)}
+			</main>
+		)
 	}
 
-	const handleDecrement = () => {
-		const success = decrement()
-		if (!success) {
-			toast.error('已达到最小值 (0)')
-		}
+	const filteredEvents = events.filter(event => 
+		filter === 'all' ? true : event.status === filter
+	)
+
+	const handleDeleteEvent = (id: string) => {
+		const { deleteEvent } = useEventStore.getState()
+		deleteEvent(id)
+		toast.success('事件删除成功')
 	}
 
-	const handleReset = () => {
-		reset()
-		toast.success('计数器已重置为 0')
+	const handleStatusChange = (id: string, status: 'pending' | 'in-progress' | 'completed') => {
+		const { updateEventStatus } = useEventStore.getState()
+		updateEventStatus(id, status)
+		toast.success('事件状态更新成功')
+	}
+
+	const handleLogout = () => {
+		logout()
+		toast.success('已退出登录')
+	}
+
+	const formatDateTime = (date: string, time: string) => {
+		const dateObj = new Date(date + 'T' + time)
+		return dateObj.toLocaleString('zh-CN', {
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit'
+		})
 	}
 
 	return (
-		<main className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-8">
-			
-			<div className="space-y-8 text-center">
-				<h1 className="font-medium text-2xl text-gray-900">
-
-					初始化模板
-				</h1>
-				
-				<div className="space-y-4">
-					<div className="flex h-16 items-center justify-center font-bold text-4xl text-gray-900">
-						{isLoading ? (
-							<Skeleton className="h-8 w-8 bg-gray-200" />
+		<div className="container mx-auto py-8 px-4">
+			{/* 头部 */}
+			<div className="flex items-center justify-between mb-8">
+				<div>
+					<h1 className="text-3xl font-bold text-gray-900">事件管理系统</h1>
+					<p className="text-gray-600 mt-2">欢迎回来，{currentUser?.name}！</p>
+				</div>
+				<div className="flex items-center gap-4">
+					<div className="flex items-center gap-2 text-sm text-gray-600">
+						{currentUser?.role === 'admin' ? (
+							<Crown className="w-4 h-4 text-yellow-500" />
 						) : (
-							count
+							<User className="w-4 h-4 text-gray-500" />
 						)}
+						<span>{currentUser?.role === 'admin' ? '管理员' : '普通用户'}</span>
 					</div>
-					
-					<div className="flex justify-center gap-4">
-						<Button 
-							onClick={handleDecrement}
-							variant="outline"
-							disabled={count === 0 || isLoading}
-						>
-							<Minus className="h-4 w-4 text-gray-600" />
-						</Button>
-						
-						<Button 
-							onClick={handleReset}
-							variant="outline"
-							disabled={isLoading}
-						>
-							<RefreshCcw className="h-4 w-4 text-gray-600" />
-						</Button>
-						
-						<Button 
-							onClick={handleIncrement}
-							variant="outline"
-							disabled={count === 10 || isLoading}
-						>
-							<Plus className="h-4 w-4 text-gray-600" />
-						</Button>
-					</div>
-					
-					<div className="flex flex-col gap-2">
-						<p className="text-gray-600 text-sm">
-							玩玩看 👆 这只是个演示
-						</p>
-						<p className="text-gray-500 text-sm">
-							范围: 0-10 | 自动保存到浏览器本地
-						</p>
-					</div>
+					<Button variant="outline" onClick={handleLogout}>
+						<LogOut className="w-4 h-4 mr-2" />
+						退出登录
+					</Button>
 				</div>
 			</div>
-		</main>
+
+			{/* 主要内容 */}
+			<Tabs value={activeTab} onValueChange={setActiveTab}>
+				<TabsList className="grid w-full grid-cols-2">
+					<TabsTrigger value="events">事件管理</TabsTrigger>
+					<TabsTrigger value="users">
+						<Users className="w-4 h-4 mr-2" />
+						用户管理
+						{currentUser?.role !== 'admin' && (
+							<Badge variant="outline" className="ml-2 text-xs">管理员</Badge>
+						)}
+					</TabsTrigger>
+				</TabsList>
+
+				{/* 事件管理标签页 */}
+				<TabsContent value="events" className="space-y-6">
+					<div className="flex items-center justify-between">
+						<div>
+							<h2 className="text-2xl font-bold text-gray-900">事件看板</h2>
+							<p className="text-gray-600 mt-1">管理和跟踪所有事件的进度</p>
+						</div>
+						<Button onClick={() => setIsAddDialogOpen(true)}>
+							<Plus className="w-4 h-4 mr-2" />
+							添加事件
+						</Button>
+					</div>
+
+					{/* 筛选器 */}
+					<div className="flex gap-2 mb-6">
+						<Button
+							variant={filter === 'all' ? 'default' : 'outline'}
+							onClick={() => setFilter('all')}
+						>
+							全部 ({events.length})
+						</Button>
+						<Button
+							variant={filter === 'pending' ? 'default' : 'outline'}
+							onClick={() => setFilter('pending')}
+						>
+							待处理 ({events.filter(e => e.status === 'pending').length})
+						</Button>
+						<Button
+							variant={filter === 'in-progress' ? 'default' : 'outline'}
+							onClick={() => setFilter('in-progress')}
+						>
+							进行中 ({events.filter(e => e.status === 'in-progress').length})
+						</Button>
+						<Button
+							variant={filter === 'completed' ? 'default' : 'outline'}
+							onClick={() => setFilter('completed')}
+						>
+							已完成 ({events.filter(e => e.status === 'completed').length})
+						</Button>
+					</div>
+
+					{/* 事件列表 */}
+					{filteredEvents.length === 0 ? (
+						<Card>
+							<CardContent className="text-center py-8">
+								<Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+								<h3 className="text-lg font-medium text-gray-900 mb-2">暂无事件</h3>
+								<p className="text-gray-500">点击"添加事件"按钮创建第一个事件</p>
+							</CardContent>
+						</Card>
+					) : (
+						<div className="grid gap-4">
+							{filteredEvents.map(event => {
+								const user = getUserById(event.assignedUserId)
+								const isOverdue = new Date(event.deadline + 'T' + event.time) < new Date()
+								
+								return (
+									<Card key={event.id} className={`${isOverdue && event.status !== 'completed' ? 'border-red-500' : ''}`}>
+										<CardHeader>
+											<div className="flex items-start justify-between">
+												<div className="flex-1">
+													<CardTitle className="text-lg">{event.title}</CardTitle>
+													<CardDescription className="mt-1">{event.description}</CardDescription>
+												</div>
+												<div className="flex items-center gap-2">
+													<Badge className={`${statusMap[event.status].color} text-white`}>
+														{statusMap[event.status].label}
+													</Badge>
+													{isOverdue && event.status !== 'completed' && (
+														<Badge variant="destructive">已过期</Badge>
+													)}
+												</div>
+											</div>
+										</CardHeader>
+										<CardContent>
+											<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+												<div className="flex items-center gap-2 text-sm text-gray-600">
+													<Calendar className="w-4 h-4" />
+													<span>截止: {formatDateTime(event.deadline, event.time)}</span>
+												</div>
+												<div className="flex items-center gap-2 text-sm text-gray-600">
+													<User className="w-4 h-4" />
+													<span>负责人: {user?.name || '未知用户'}</span>
+												</div>
+												<div className="flex items-center gap-2 text-sm text-gray-600">
+													<Clock className="w-4 h-4" />
+													<span>提醒: {event.reminderEnabled ? `${event.reminderInterval}分钟前` : '已关闭'}</span>
+												</div>
+											</div>
+											
+											<div className="flex gap-2">
+												{event.status !== 'completed' && (
+													<>
+														<Button
+															size="sm"
+															variant="outline"
+															onClick={() => handleStatusChange(event.id, 'in-progress')}
+															disabled={event.status === 'in-progress'}
+														>
+															开始处理
+														</Button>
+														<Button
+															size="sm"
+															variant="outline"
+															onClick={() => handleStatusChange(event.id, 'completed')}
+														>
+															标记完成
+														</Button>
+													</>
+												)}
+												{event.status === 'completed' && (
+													<Button
+														size="sm"
+														variant="outline"
+														onClick={() => handleStatusChange(event.id, 'pending')}
+													>
+														重新打开
+													</Button>
+												)}
+												<Button
+													size="sm"
+													variant="destructive"
+													onClick={() => handleDeleteEvent(event.id)}
+												>
+													<Trash2 className="w-4 h-4" />
+												</Button>
+											</div>
+										</CardContent>
+									</Card>
+								)
+							})}
+						</div>
+					)}
+				</TabsContent>
+
+				{/* 用户管理标签页 */}
+				<TabsContent value="users">
+					<UserManagement />
+				</TabsContent>
+			</Tabs>
+
+			<AddEventDialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+		</div>
 	)
 }
