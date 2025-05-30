@@ -27,7 +27,7 @@ export function UserManagement() {
 
   const isAdmin = currentUser?.role === 'admin'
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
@@ -35,23 +35,27 @@ export function UserManagement() {
       return
     }
 
-    const success = addUser({
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: formData.role
-    })
+    try {
+      const success = await addUser({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      })
 
-    if (success) {
-      toast.success('用户添加成功')
-      setIsAddDialogOpen(false)
-      setFormData({ name: '', email: '', password: '', role: 'user' })
-    } else {
-      toast.error('邮箱已被使用')
+      if (success) {
+        toast.success('用户添加成功')
+        setIsAddDialogOpen(false)
+        setFormData({ name: '', email: '', password: '', role: 'user' })
+      } else {
+        toast.error('邮箱已被使用')
+      }
+    } catch (error) {
+      toast.error('添加用户失败，请重试')
     }
   }
 
-  const handleEditUser = (e: React.FormEvent) => {
+  const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.name.trim() || !formData.email.trim()) {
@@ -69,27 +73,35 @@ export function UserManagement() {
       updateData.password = formData.password
     }
 
-    const success = updateUser(editingUser.id, updateData)
+    try {
+      const success = await updateUser(editingUser.id, updateData)
 
-    if (success) {
-      toast.success('用户信息更新成功')
-      setIsEditDialogOpen(false)
-      setEditingUser(null)
-      setFormData({ name: '', email: '', password: '', role: 'user' })
-    } else {
-      toast.error('邮箱已被其他用户使用')
+      if (success) {
+        toast.success('用户信息更新成功')
+        setIsEditDialogOpen(false)
+        setEditingUser(null)
+        setFormData({ name: '', email: '', password: '', role: 'user' })
+      } else {
+        toast.error('邮箱已被其他用户使用')
+      }
+    } catch (error) {
+      toast.error('更新用户失败，请重试')
     }
   }
 
-  const handleDeleteUser = (userId: string) => {
+  const handleDeleteUser = async (userId: string) => {
     if (userId === currentUser?.id) {
       toast.error('不能删除当前登录用户')
       return
     }
 
     if (window.confirm('确定要删除这个用户吗？')) {
-      deleteUser(userId)
-      toast.success('用户删除成功')
+      try {
+        await deleteUser(userId)
+        toast.success('用户删除成功')
+      } catch (error) {
+        toast.error('删除用户失败，请重试')
+      }
     }
   }
 

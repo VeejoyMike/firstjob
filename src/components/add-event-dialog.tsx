@@ -29,7 +29,7 @@ export function AddEventDialog({ open, onOpenChange }: AddEventDialogProps) {
     reminderInterval: 30
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!formData.title.trim()) {
@@ -52,31 +52,35 @@ export function AddEventDialog({ open, onOpenChange }: AddEventDialogProps) {
       return
     }
 
-    addEvent({
-      title: formData.title,
-      description: formData.description,
-      deadline: formData.deadline,
-      time: formData.time,
-      status: formData.status,
-      assignedUserId: formData.assignedUserId,
-      reminderEnabled: formData.reminderEnabled,
-      reminderInterval: formData.reminderInterval
-    })
+    try {
+      await addEvent({
+        title: formData.title,
+        description: formData.description,
+        deadline: formData.deadline,
+        time: formData.time,
+        status: formData.status,
+        assignedUserId: formData.assignedUserId,
+        reminderEnabled: formData.reminderEnabled,
+        reminderInterval: formData.reminderInterval
+      })
 
-    toast.success('事件添加成功')
-    onOpenChange(false)
-    
-    // 重置表单
-    setFormData({
-      title: '',
-      description: '',
-      deadline: '',
-      time: '',
-      status: 'pending',
-      assignedUserId: '',
-      reminderEnabled: true,
-      reminderInterval: 30
-    })
+      toast.success('事件创建成功')
+      onOpenChange(false)
+      
+      // 重置表单
+      setFormData({
+        title: '',
+        description: '',
+        deadline: '',
+        time: '',
+        status: 'pending',
+        assignedUserId: '',
+        reminderEnabled: true,
+        reminderInterval: 30
+      })
+    } catch (error) {
+      toast.error('创建失败，请重试')
+    }
   }
 
   return (

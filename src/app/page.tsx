@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useReminder } from '@/hooks/use-reminder'
-import { CalendarIcon, Clock, User, Users, LogOut, Plus, Filter, Crown, Edit, MessageSquare, MoreVertical, Trash2 } from 'lucide-react'
+import { CalendarIcon, Clock, User, Users, LogOut, Plus, Filter, Crown, Edit, MessageSquare, MoreVertical, Trash2, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function Home() {
@@ -24,10 +24,12 @@ export default function Home() {
 		users, 
 		currentUser, 
 		isAuthenticated, 
+		loading,
 		logout, 
 		getUserById, 
 		updateEventStatus,
-		deleteEvent
+		deleteEvent,
+		fetchData
 	} = useEventStore()
 
 	const [view, setView] = useState<'login' | 'register'>('login')
@@ -39,6 +41,11 @@ export default function Home() {
 	
 	// 启用提醒系统
 	useReminder()
+
+	// 初始化数据加载
+	useEffect(() => {
+		fetchData()
+	}, [fetchData])
 
 	// 过滤事件
 	const filteredEvents = events.filter(event => {
@@ -92,11 +99,36 @@ export default function Home() {
 		setShowCommentsDialog(true)
 	}
 
-	const handleDeleteEvent = (eventId: string, eventTitle: string) => {
+	const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
 		if (window.confirm(`确定要删除事件"${eventTitle}"吗？此操作不可恢复。`)) {
-			deleteEvent(eventId)
-			toast.success('事件删除成功')
+			try {
+				await deleteEvent(eventId)
+				toast.success('事件删除成功')
+			} catch (error) {
+				toast.error('删除失败，请重试')
+			}
 		}
+	}
+
+	const handleStatusChange = async (eventId: string, newStatus: 'pending' | 'in-progress' | 'completed') => {
+		try {
+			await updateEventStatus(eventId, newStatus)
+			toast.success(`状态已更新为：${getStatusText(newStatus)}`)
+		} catch (error) {
+			toast.error('状态更新失败，请重试')
+		}
+	}
+
+	// 如果正在加载数据，显示加载界面
+	if (loading) {
+		return (
+			<div className="min-h-screen bg-gray-50 flex items-center justify-center">
+				<div className="text-center">
+					<Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+					<p className="text-gray-600">正在加载数据...</p>
+				</div>
+			</div>
+		)
 	}
 
 	if (!isAuthenticated) {
@@ -234,14 +266,13 @@ export default function Home() {
 											<div className="space-y-4">
 												<div className="flex justify-between items-center">
 													<Badge 
-														className={getStatusColor(event.status)}
+														className={`${getStatusColor(event.status)} cursor-pointer`}
 														onClick={() => {
 															const statuses: Array<'pending' | 'in-progress' | 'completed'> = ['pending', 'in-progress', 'completed']
 															const currentIndex = statuses.indexOf(event.status)
 															const nextStatus = statuses[(currentIndex + 1) % statuses.length]
 															if (nextStatus) {
-																updateEventStatus(event.id, nextStatus)
-																toast.success(`状态已更新为：${getStatusText(nextStatus)}`)
+																handleStatusChange(event.id, nextStatus)
 															}
 														}}
 													>

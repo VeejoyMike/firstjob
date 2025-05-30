@@ -46,7 +46,7 @@ export function EditEventDialog({ open, onOpenChange, event }: EditEventDialogPr
     }
   }, [event])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!event) return
@@ -71,19 +71,23 @@ export function EditEventDialog({ open, onOpenChange, event }: EditEventDialogPr
       return
     }
 
-    updateEvent(event.id, {
-      title: formData.title,
-      description: formData.description,
-      deadline: formData.deadline,
-      time: formData.time,
-      status: formData.status,
-      assignedUserId: formData.assignedUserId,
-      reminderEnabled: formData.reminderEnabled,
-      reminderInterval: formData.reminderInterval
-    })
+    try {
+      await updateEvent(event.id, {
+        title: formData.title,
+        description: formData.description,
+        deadline: formData.deadline,
+        time: formData.time,
+        status: formData.status,
+        assignedUserId: formData.assignedUserId,
+        reminderEnabled: formData.reminderEnabled,
+        reminderInterval: formData.reminderInterval
+      })
 
-    toast.success('事件更新成功')
-    onOpenChange(false)
+      toast.success('事件更新成功')
+      onOpenChange(false)
+    } catch (error) {
+      toast.error('更新失败，请重试')
+    }
   }
 
   const handleCancel = () => {

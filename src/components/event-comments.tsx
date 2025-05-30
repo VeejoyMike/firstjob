@@ -34,13 +34,15 @@ export function EventComments({ eventId }: EventCommentsProps) {
 
     setIsSubmitting(true)
     
-    // 模拟提交延迟
-    setTimeout(() => {
-      addComment(eventId, newComment.trim())
+    try {
+      await addComment(eventId, newComment.trim())
       setNewComment('')
-      setIsSubmitting(false)
       toast.success('评论发表成功')
-    }, 200)
+    } catch (error) {
+      toast.error('发表失败，请重试')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const formatDate = (dateString: string) => {

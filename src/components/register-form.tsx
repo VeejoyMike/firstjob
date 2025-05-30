@@ -27,7 +27,7 @@ export function RegisterForm({ onRegisterSuccess, onSwitchToLogin }: RegisterFor
     e.preventDefault()
     
     if (!formData.name.trim()) {
-      toast.error('请输入用户名')
+      toast.error('请输入姓名')
       return
     }
     
@@ -53,9 +53,8 @@ export function RegisterForm({ onRegisterSuccess, onSwitchToLogin }: RegisterFor
 
     setIsLoading(true)
     
-    // 模拟注册延迟
-    setTimeout(() => {
-      const success = register({
+    try {
+      const success = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
@@ -74,9 +73,11 @@ export function RegisterForm({ onRegisterSuccess, onSwitchToLogin }: RegisterFor
       } else {
         toast.error('邮箱已被注册，请使用其他邮箱')
       }
-      
+    } catch (error) {
+      toast.error('注册失败，请重试')
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
 
   return (
